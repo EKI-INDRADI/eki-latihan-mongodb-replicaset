@@ -1,0 +1,80 @@
+1. INSTALL DOCKER
+https://docs.docker.com/engine/install/ubuntu/
+https://github.com/EKI-INDRADI/eki-latihan-docker-mongodb
+
+
+2. CLEAN DATA ( BACKUP FIRST IF /home/DOCKER_FILE/EKIUSER_db_data ALREADY EXIST )
+docker container stop EKI_DB_7000 &&     (if container running only)
+docker container rm EKI_DB_7000 &&     (if container already exist only)
+rm -rf /home/DOCKER_FILE/EKIUSER_db_data/*
+rm -rf /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile && 
+rm -rf /home/DOCKER_FILE/EKIUSER_db_data/*
+
+3. GENERATE KEY & FOLDER
+mkdir -p /home/DOCKER_FILE/EKIUSER_db_data && 
+mkdir -p /home/DOCKER_FILE/EKIUSER_db_data_key &&  
+nano  /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile
+DBEKIUSERTESTING123
+
+4. EASY COPY PASTE ,  AUTO GENERATE IMAGE , CONTAINER & AUTO RUNNING
+chmod 777 -Rv /home/DOCKER_FILE/EKIUSER_db_data && 
+chmod 400 /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile && 
+chown 999:999 /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile && 
+cp -avr /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile /home/DOCKER_FILE/EKIUSER_db_data_key/keyFile_backup &&
+docker container create --name EKI_DB_7000 \
+--restart=always \
+-it  \
+-p 7000:27017 \
+-v /home/DOCKER_FILE/EKIUSER_db_data:/data/db \
+-v /home/DOCKER_FILE/EKIUSER_db_data_key:/data/key \
+-e MONGO_INITDB_ROOT_USERNAME=EKIUSER \
+-e MONGO_INITDB_ROOT_PASSWORD=EKITESTING123 \
+mongo:5.0.8-focal \
+mongod --replSet "EKITESTING-REPSET" --keyFile "/data/key/keyFile" &&
+docker container start EKI_DB_7000
+
+
+
+SETUP (finish all server step 1,2,3,4)
+- SERVER 1 (1,2,3,4,5) MASTER ( example ram size 4 GB )
+- SERVER 2 (1,2,3,4) SECONDARY ( example ram size 4 GB )
+- SERVER 3 (1,2,3,4) ARBITER ( example ram size 512 MB )
+
+
+
+5. SETUP MASTER ONLY  (after finish step 1,2,3,4 all server)
+
+=================== MASTER
+
+docker exec -u 0 -it EKI_DB_7000 bash
+mongosh admin -u 'EKIUSER' -p 'EKITESTING123'
+
+config = {_id: "EKITESTING-REPSET", members:[
+{_id: 0, host: '<YOUR_PUBLIC_IP_ADDR_1>:7000',  priority: 1},
+{_id: 1, host: '<YOUR_PUBLIC_IP_ADDR_2>:7000',  priority: 2},
+{_id: 2,host: '<YOUR_PUBLIC_IP_ADDR_3>:7000', arbiterOnly: true,  priority: 0}
+]}
+
+
+rs.initiate(config)
+rs.reconfig(config, {force: true})
+
+=================== MASTER
+
+PRIMARY = mongodb://EKIUSER:EKITESTING123@<YOUR_PUBLIC_IP_ADDR_1>:7000?authSource=admin
+SECONDARY = mongodb://EKIUSER:EKITESTING123@<YOUR_PUBLIC_IP_ADDR_2>:7000?authSource=admin
+ARBITER = mongodb://EKIUSER:EKITESTING123@<YOUR_PUBLIC_IP_ADDR_3>:7000?authSource=admin
+
+
+
+
+# EKI RESEARCH & DEVELOPMENT
+
+reference : 
+https://github.com/EKI-INDRADI/eki-latihan-mongodb
+https://github.com/EKI-INDRADI/eki-latihan-docker-mongodb
+
+# Regards,
+
+# Eki Indradi
+"TIME > KNOWLEDGE > MONEY".
